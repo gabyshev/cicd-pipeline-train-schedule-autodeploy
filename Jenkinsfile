@@ -62,9 +62,11 @@ pipeline {
                 echo 'sleeping... 15 sec'
                 sleep 15
                 echo 'smoke test'
-                def response = httpRequest "${KUBE_NODE_IP}:8081"
-                if (response.code != 200) {
-                    error("FAIL because repsonse code for canary deploymeny was: ${response.code}")
+                script {
+                    def response = httpRequest "${KUBE_NODE_IP}:8081"
+                    if (response.code != 200) {
+                        error("FAIL because repsonse code for canary deploymeny was: ${response.code}")
+                    }
                 }
             }
         }
@@ -73,8 +75,6 @@ pipeline {
                 branch 'master'
             }
             steps {
-                input 'Deploy to Production?'
-                milestone(1)
                 kubernetesDeploy(
                     kubeconfigId: 'kubeconfig',
                     configs: 'train-schedule-kube.yml',
