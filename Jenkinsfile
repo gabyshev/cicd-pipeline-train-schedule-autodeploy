@@ -3,6 +3,7 @@ pipeline {
     environment {
         //be sure to replace "willbla" with your own Docker Hub username
         DOCKER_IMAGE_NAME = "gabyshev/train-app"
+        CANARY_REPLICAS = 0
     }
     stages {
         stage('Build') {
@@ -53,27 +54,42 @@ pipeline {
                 )
             }
         }
-        stage('DeployToProduction') {
+        stage('smokeTest') {
             when {
                 branch 'master'
             }
-            environment { 
-                CANARY_REPLICAS = 0
+            steps {
+                echo 'sleeping... 15 sec'
+                sleep 15
+                echo 'smoke test'
+                def response = httpRequest "${KUBE_NODE_IP}:8081"
+                if (response.code != 200) {
+                    error("FAIL because repsonse code for canary deploymeny was: ${response.code}")
+                }
+            }
+        }
+        stage('DeployToProduction') {
+            when {
+                branch 'master'
             }
             steps {
                 input 'Deploy to Production?'
                 milestone(1)
                 kubernetesDeploy(
                     kubeconfigId: 'kubeconfig',
-                    configs: 'train-schedule-kube-canary.yml',
-                    enableConfigSubstitution: true
-                )
-                kubernetesDeploy(
-                    kubeconfigId: 'kubeconfig',
                     configs: 'train-schedule-kube.yml',
                     enableConfigSubstitution: true
                 )
             }
+        }
+    }
+    post {
+        cleanup {
+            kubernetesDeploy(
+                kubeconfigId: 'kubeconfig',
+                configs: 'train-schedule-kube-canary.yml',
+                enableConfigSubstitution: true
+            )
         }
     }
 }
