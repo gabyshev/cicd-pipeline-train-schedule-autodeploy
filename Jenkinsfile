@@ -63,7 +63,7 @@ pipeline {
                 sleep 15
                 echo 'smoke test'
                 script {
-                    def response = httpRequest "${KUBE_NODE_IP}:8081"
+                    def response = httpRequest "http://${KUBE_NODE_IP}:8081"
                     if (response.code != 200) {
                         error("FAIL because repsonse code for canary deploymeny was: ${response.code}")
                     }
